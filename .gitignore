@@ -1,0 +1,16 @@
+.gradle/
+.classpath
+.project
+.settings/
+bin/
+build/
+bot-config/
+bot.log*
+out/
+modules/
+/*.iml
+/*.ipr
+/*.iws
+/publishing.creds
+
+/src/main/java/com/lukestadem/repulse/Main.java

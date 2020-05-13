@@ -1,0 +1,71 @@
+plugins {
+	id 'java'
+    id 'java-library'
+	id 'eclipse'
+	id 'idea'
+	id 'maven-publish'
+	
+    id 'application'
+}
+
+repositories {
+	mavenCentral()
+	maven {
+		url "http://bigbass1997.com:3510/repository/internal/"
+	}
+}
+
+dependencies {
+	api "org.slf4j:slf4j-api:1.8.0-beta4"
+	api "org.slf4j:slf4j-log4j12:1.8.0-beta4"
+	
+	api 'io.reactivex.rxjava2:rxjava:2.2.0'
+	
+	api 'org.java-websocket:Java-WebSocket:1.5.0'
+	
+	api 'org.codelibs:curl4j:1.2.4'
+	
+	api 'javax.json:javax.json-api:1.1.4'
+	api 'org.glassfish:javax.json:1.1.4'
+	
+	api 'com.github.vladimir-bukhtoyarov:bucket4j-core:4.10.0'
+}
+
+version = '1.0.0'
+group = 'com.lukestadem'
+sourceCompatibility = '1.8'
+
+mainClassName = 'com.lukestadem.repulse.Main'
+
+task sourceJar(type: Jar){
+	from sourceSets.main.allJava
+}
+
+publishing {
+	repositories {
+		maven {
+			name = 'BassNet'
+			url = 'http://bigbass1997.com:3510/repository/internal/'
+			credentials {
+				def credsFile = rootProject.file("publishing.creds")
+				def creds = new Properties()
+				if (credsFile.exists()){
+					creds.load(new FileInputStream(credsFile))
+				}
+				
+				username = creds['username'] ?: ''
+				password = creds['password'] ?: ''
+			}
+		}
+	}
+	
+    publications {
+        maven(MavenPublication) {
+            from components.java
+			
+			artifact sourceJar {
+				classifier "sources"
+			}
+        }
+    }
+}
