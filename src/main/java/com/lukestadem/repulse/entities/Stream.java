@@ -58,4 +58,8 @@ public class Stream {
 			});
 		}
 	}
+	
+	public String getStreamPreviewUrl(){
+		return "https://static-cdn.jtvnw.net/previews-ttv/live_user_" + username.toLowerCase() + "-1920x1080.jpg";
+	}
 }
