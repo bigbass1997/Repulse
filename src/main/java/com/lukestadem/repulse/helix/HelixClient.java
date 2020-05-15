@@ -5,6 +5,7 @@ import com.lukestadem.repulse.RateLimitManager;
 import com.lukestadem.repulse.TwitchClient;
 import com.lukestadem.repulse.Util;
 import com.lukestadem.repulse.entities.Game;
+import com.lukestadem.repulse.entities.BitsLeaderboard;
 import org.codelibs.curl.Curl;
 import org.codelibs.curl.CurlRequest;
 import org.codelibs.curl.CurlResponse;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -23,8 +25,65 @@ public class HelixClient {
 	
 	private final TwitchClient twitch;
 	
+	public enum Period {
+		DAY, WEEK, MOTH, YEAR, ALL
+	}
+	
 	public HelixClient(TwitchClient twitch){
 		this.twitch = twitch;
+	}
+	
+	/**
+	 * @see <a href="https://dev.twitch.tv/docs/api/reference#get-bits-leaderboard">https://dev.twitch.tv/docs/api/reference#get-bits-leaderboard</a>
+	 */
+	public BitsLeaderboard getBitsLeaderboard(Integer count, Period period, Instant startedAt, String userId){
+		if(count == null || count < 1){
+			count = 10;
+		}
+		if(count > 100){
+			count = 100;
+		}
+		
+		if(twitch.hasTokenExpired()){
+			logAuthToken("getBitsLeaderboard()");
+			return null;
+		}
+		
+		final CurlRequest req = Curl.get(Constants.HELIX + "bits/leaderboard");
+		twitch.applyCommonHeaders(req);
+		
+		if(count != null){
+			req.param("count", Integer.toString(count));
+		}
+		if(period != null){
+			req.param("period", period.name().toLowerCase());
+		}
+		if(startedAt != null){
+			req.param("started_at", startedAt.toString());
+		}
+		if(!isNullOrEmpty(userId)){
+			req.param("user_id", userId);
+		}
+		
+		if(twitch.ratelimit().tryConsume(RateLimitManager.BucketName.ALL, 1)){
+			final CurlResponse res = req.execute();
+			
+			if(res != null){
+				final String content = res.getContentAsString();
+				
+				if(content != null && !content.isEmpty() && content.startsWith("{") && content.endsWith("}")){
+					final JsonObject json = Util.parseJson(res.getContentAsString());
+					if(!json.containsKey("data")){
+						log.warn("Json \"data\" was not found! " + json.toString());
+						return null;
+					}
+					
+					return new BitsLeaderboard(json);
+				}
+			}
+		}
+		
+		return null;
 	}
 	
 	public List<Game> getGames(String id, String name){
@@ -37,11 +96,12 @@ public class HelixClient {
 		}
 		
 		if(twitch.hasTokenExpired()){
-			log.warn("getGames() could not complete due to an expired auth token!");
+			logAuthToken("getGames()");
 			return null;
 		}
 		
 		final CurlRequest req = Curl.get(Constants.HELIX + "games");
+		twitch.applyCommonHeaders(req);
 		
 		idList.forEach(id -> {
 			if(!isNullOrEmpty(id)){
@@ -54,10 +114,6 @@ public class HelixClient {
 				req.param("name", name);
 			}
 		});
-		
-		req.header(Constants.CLIENT_ID, twitch.getClientId());
-		req.header(Constants.AUTHORIZATION, twitch.getBearerAccess());
-		req.header(Constants.USER_AGENT, twitch.getUserAgent());
 		
 		if(twitch.ratelimit().tryConsume(RateLimitManager.BucketName.ALL, 1)){
 			final CurlResponse res = req.execute();
@@ -93,5 +149,9 @@ public class HelixClient {
 	
 	private boolean isNullOrEmpty(String str){
 		return (str == null || str.isEmpty());
+	}
+	
+	private void logAuthToken(String funcName){
+		log.warn(funcName + " could not complete due to an expired auth token!");
 	}
 }

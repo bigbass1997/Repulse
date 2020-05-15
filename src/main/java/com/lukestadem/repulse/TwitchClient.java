@@ -3,6 +3,7 @@ package com.lukestadem.repulse;
 import com.lukestadem.repulse.helix.HelixClient;
 import com.lukestadem.repulse.pubsub.PubSubClient;
 import org.codelibs.curl.Curl;
+import org.codelibs.curl.CurlRequest;
 import org.codelibs.curl.CurlResponse;
 
 import javax.json.JsonObject;
@@ -100,6 +101,14 @@ public class TwitchClient {
 		}
 		
 		return auth.hasExpired();
+	}
+	
+	public CurlRequest applyCommonHeaders(CurlRequest req){
+		req.header(Constants.CLIENT_ID, getClientId());
+		req.header(Constants.AUTHORIZATION, getBearerAccess());
+		req.header(Constants.USER_AGENT, getUserAgent());
+		
+		return req;
 	}
 	
 	public HelixClient helix(){
