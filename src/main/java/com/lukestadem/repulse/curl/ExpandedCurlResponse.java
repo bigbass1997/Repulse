@@ -39,6 +39,8 @@ public class ExpandedCurlResponse {
 		return (json != null);
 	}
 	
+	//=== methods below this point aren't absolutely necessary, but are called commonly enough to be beneficial ===\\
+	
 	public boolean hasData(){
 		return json.containsKey("data");
 	}
@@ -53,5 +55,13 @@ public class ExpandedCurlResponse {
 	
 	public CurlError getError(){
 		return error;
+	}
+	
+	public boolean hasPaginationCursor(){
+		return (json.containsKey("pagination") && json.getJsonObject("pagination").containsKey("cursor"));
+	}
+	
+	public String getPaginationCursor(){
+		return json.getJsonObject("pagination").getString("cursor", "");
 	}
 }

@@ -6,8 +6,11 @@ import com.lukestadem.repulse.RateLimitManager;
 import com.lukestadem.repulse.TwitchClient;
 import com.lukestadem.repulse.curl.CurlTemplates;
 import com.lukestadem.repulse.curl.ExpandedCurlResponse;
+import com.lukestadem.repulse.curl.ReusableCurlRequest;
+import com.lukestadem.repulse.entities.Clip;
 import com.lukestadem.repulse.entities.Game;
 import com.lukestadem.repulse.entities.BitsLeaderboard;
+import org.codelibs.curl.Curl;
 import org.codelibs.curl.CurlRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +81,63 @@ public class HelixClient {
 	}
 	
 	//TODO public Something createClip(){}
+	
+	/**
+	 * @see <a href="https://dev.twitch.tv/docs/api/reference#get-clips">https://dev.twitch.tv/docs/api/reference#get-clips</a>
+	 */
+	public List<Clip> getClips(String userId, String gameId, List<String> clipIds, Instant startedAt, Instant endedAt, Integer count){
+		if(isNullOrEmpty(userId) && isNullOrEmpty(gameId) && (clipIds == null || clipIds.size() == 0)){
+			throw new IllegalArgumentException("One of the following arguments must be specified: userId, gameId, or clipId!");
+		}
+		
+		if(count == null || count < 1){
+			count = 20;
+		}
+		if(count > 100){
+			count = 100;
+		}
+		
+		if(twitch.hasTokenExpired()){
+			logAuthToken("getClips()");
+			return null;
+		}
+		
+		final ReusableCurlRequest req = CurlTemplates.resuable(twitch, Curl.Method.GET, Constants.HELIX + "clips");
+		
+		if(!isNullOrEmpty(userId)){
+			req.param("broadcaster_id", userId);
+		} else if(!isNullOrEmpty(gameId)){
+			req.param("game_id", gameId);
+		} else if(clipIds.size() > 0){
+			clipIds.forEach(clipId -> {
+				if(!clipId.isEmpty()){
+					req.param("id", clipId);
+				}
+			});
+		}
+		
+		if(startedAt != null && endedAt != null){ // both must be included, otherwise Twitch ignores whichever param that was given
+			req.param("started_at", startedAt.toString());
+			req.param("ended_at", endedAt.toString());
+		}
+		
+		req.param("first", count.toString());
+		
+		final List<Clip> clips = new ArrayList<>();
+		
+		final List<ExpandedCurlResponse> responses = CurlTemplates.performPaginationRequest(req, twitch.ratelimit(), RateLimitManager.BucketName.ALL.id);
+		responses.forEach(res -> {
+			if(res.isValidJson() && res.hasData()){
+				res.getData().asJsonArray().forEach(value -> {
+					if(value instanceof JsonObject){
+						clips.add(new Clip(value.asJsonObject()));
+					}
+				});
+			}
+		});
+		
+		return clips;
+	}
 	
 	public List<Game> getGames(String id, String name){
 		return getGames(Collections.singletonList(id), Collections.singletonList(name));
