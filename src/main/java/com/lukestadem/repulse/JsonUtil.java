@@ -7,7 +7,7 @@ import javax.json.JsonObject;
 import javax.json.JsonReader;
 import java.io.StringReader;
 
-public class Util {
+public class JsonUtil {
 	
 	public static JsonObject parseJson(CurlResponse res){
 		if(res == null){

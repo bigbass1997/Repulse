@@ -1,14 +1,14 @@
 package com.lukestadem.repulse.helix;
 
 import com.lukestadem.repulse.Constants;
+import com.lukestadem.repulse.JsonUtil;
 import com.lukestadem.repulse.RateLimitManager;
 import com.lukestadem.repulse.TwitchClient;
-import com.lukestadem.repulse.Util;
+import com.lukestadem.repulse.curl.CurlTemplates;
+import com.lukestadem.repulse.curl.ExpandedCurlResponse;
 import com.lukestadem.repulse.entities.Game;
 import com.lukestadem.repulse.entities.BitsLeaderboard;
-import org.codelibs.curl.Curl;
 import org.codelibs.curl.CurlRequest;
-import org.codelibs.curl.CurlResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,11 +49,10 @@ public class HelixClient {
 			return null;
 		}
 		
-		final CurlRequest req = Curl.get(Constants.HELIX + "bits/leaderboard");
-		twitch.applyCommonHeaders(req);
+		final CurlRequest req = CurlTemplates.get(twitch, Constants.HELIX + "bits/leaderboard");
 		
 		if(count != null){
-			req.param("count", Integer.toString(count));
+			req.param("count", count.toString());
 		}
 		if(period != null){
 			req.param("period", period.name().toLowerCase());
@@ -66,25 +65,19 @@ public class HelixClient {
 		}
 		
 		if(twitch.ratelimit().tryConsume(RateLimitManager.BucketName.ALL, 1)){
-			final CurlResponse res = req.execute();
+			final ExpandedCurlResponse res = CurlTemplates.performRequest(req);
 			
-			if(res != null){
-				final String content = res.getContentAsString();
-				
-				if(content != null && !content.isEmpty() && content.startsWith("{") && content.endsWith("}")){
-					final JsonObject json = Util.parseJson(res.getContentAsString());
-					if(!json.containsKey("data")){
-						log.warn("Json \"data\" was not found! " + json.toString());
-						return null;
-					}
-					
-					return new BitsLeaderboard(json);
-				}
+			if(res.isValidJson() && res.hasData()){
+				return new BitsLeaderboard(res.json);
+			} else if(res.hasError()){
+				log.error(res.getError().toString());
 			}
 		}
 		
 		return null;
 	}
+	
+	//TODO public Something createClip(){}
 	
 	public List<Game> getGames(String id, String name){
 		return getGames(Collections.singletonList(id), Collections.singletonList(name));
@@ -100,8 +93,7 @@ public class HelixClient {
 			return null;
 		}
 		
-		final CurlRequest req = Curl.get(Constants.HELIX + "games");
-		twitch.applyCommonHeaders(req);
+		final CurlRequest req = CurlTemplates.get(twitch, Constants.HELIX + "games");
 		
 		idList.forEach(id -> {
 			if(!isNullOrEmpty(id)){
@@ -116,31 +108,23 @@ public class HelixClient {
 		});
 		
 		if(twitch.ratelimit().tryConsume(RateLimitManager.BucketName.ALL, 1)){
-			final CurlResponse res = req.execute();
+			final ExpandedCurlResponse res = CurlTemplates.performRequest(req);
 			
-			if(res != null){
-				final String content = res.getContentAsString();
+			if(res.isValidJson() && res.hasData()){
+				final JsonArray data = res.getData().asJsonArray();
 				
-				if(content != null && !content.isEmpty() && content.startsWith("{") && content.endsWith("}")){
-					final JsonObject json = Util.parseJson(res.getContentAsString());
-					if(!json.containsKey("data")){
-						log.warn("Json \"data\" was not found! " + json.toString());
-						return null;
-					}
-					
-					final JsonArray data = json.getJsonArray("data");
-					
-					final List<Game> games = new ArrayList<>();
-					data.forEach(value -> {
-						if(value instanceof JsonObject){
-							if(!Util.hasError(value.asJsonObject())){
-								games.add(new Game(value.asJsonObject()));
-							}
+				final List<Game> games = new ArrayList<>();
+				data.forEach(value -> {
+					if(value instanceof JsonObject){
+						if(!JsonUtil.hasError(value.asJsonObject())){
+							games.add(new Game(value.asJsonObject()));
 						}
-					});
-					
-					return games;
-				}
+					}
+				});
+				
+				return games;
+			} else if(res.hasError()){
+				log.error(res.getError().toString());
 			}
 		}
 		

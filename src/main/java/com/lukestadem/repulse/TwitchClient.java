@@ -63,7 +63,7 @@ public class TwitchClient {
 				.param("client_secret", clientSecret)
 				.execute();
 		
-		final JsonObject json = Util.parseJson(res);
+		final JsonObject json = JsonUtil.parseJson(res);
 		if(json == null){
 			return auth;
 		}
@@ -101,14 +101,6 @@ public class TwitchClient {
 		}
 		
 		return auth.hasExpired();
-	}
-	
-	public CurlRequest applyCommonHeaders(CurlRequest req){
-		req.header(Constants.CLIENT_ID, getClientId());
-		req.header(Constants.AUTHORIZATION, getBearerAccess());
-		req.header(Constants.USER_AGENT, getUserAgent());
-		
-		return req;
 	}
 	
 	public HelixClient helix(){
