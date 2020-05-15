@@ -10,6 +10,7 @@ import com.lukestadem.repulse.curl.ReusableCurlRequest;
 import com.lukestadem.repulse.entities.Clip;
 import com.lukestadem.repulse.entities.Game;
 import com.lukestadem.repulse.entities.BitsLeaderboard;
+import com.lukestadem.repulse.entities.Stream;
 import org.codelibs.curl.Curl;
 import org.codelibs.curl.CurlRequest;
 import org.slf4j.Logger;
@@ -85,16 +86,9 @@ public class HelixClient {
 	/**
 	 * @see <a href="https://dev.twitch.tv/docs/api/reference#get-clips">https://dev.twitch.tv/docs/api/reference#get-clips</a>
 	 */
-	public List<Clip> getClips(String userId, String gameId, List<String> clipIds, Instant startedAt, Instant endedAt, Integer count){
+	public List<Clip> getClips(String userId, String gameId, List<String> clipIds, Instant startedAt, Instant endedAt){
 		if(isNullOrEmpty(userId) && isNullOrEmpty(gameId) && (clipIds == null || clipIds.size() == 0)){
 			throw new IllegalArgumentException("One of the following arguments must be specified: userId, gameId, or clipId!");
-		}
-		
-		if(count == null || count < 1){
-			count = 20;
-		}
-		if(count > 100){
-			count = 100;
 		}
 		
 		if(twitch.hasTokenExpired()){
@@ -121,7 +115,7 @@ public class HelixClient {
 			req.param("ended_at", endedAt.toString());
 		}
 		
-		req.param("first", count.toString());
+		req.param("first", "100");
 		
 		final List<Clip> clips = new ArrayList<>();
 		
@@ -143,8 +137,8 @@ public class HelixClient {
 		return getGames(Collections.singletonList(id), Collections.singletonList(name));
 	}
 	
-	public List<Game> getGames(List<String> idList, List<String> nameList){
-		if(idList == null && nameList == null){
+	public List<Game> getGames(List<String> gameIds, List<String> gameNames){
+		if(gameIds == null && gameNames == null){
 			return null;
 		}
 		
@@ -155,13 +149,13 @@ public class HelixClient {
 		
 		final CurlRequest req = CurlTemplates.get(twitch, Constants.HELIX + "games");
 		
-		idList.forEach(id -> {
+		gameIds.forEach(id -> {
 			if(!isNullOrEmpty(id)){
 				req.param("id", id);
 			}
 		});
 		
-		nameList.forEach(name -> {
+		gameNames.forEach(name -> {
 			if(!isNullOrEmpty(name)){
 				req.param("name", name);
 			}
@@ -189,6 +183,72 @@ public class HelixClient {
 		}
 		
 		return null;
+	}
+	
+	public List<Stream> getStreams(String gameId, String userId, String username, String language){
+		return getStreams(Collections.singletonList(gameId), Collections.singletonList(userId), Collections.singletonList(username), Collections.singletonList(language));
+	}
+	
+	public List<Stream> getStreams(List<String> gameIds, List<String> userIds, List<String> usernames, List<String> languages){
+		if(gameIds == null && userIds == null && usernames == null && languages == null){
+			throw new IllegalArgumentException("getStreams() was provided all null data");
+		}
+		
+		if(twitch.hasTokenExpired()){
+			logAuthToken("getStreams()");
+			return null;
+		}
+		
+		final ReusableCurlRequest req = CurlTemplates.resuable(twitch, Curl.Method.GET, Constants.HELIX + "streams");
+		
+		if(gameIds != null && gameIds.size() > 10){
+			gameIds = gameIds.subList(0, 10);
+		}
+		if(userIds != null && userIds.size() > 100){
+			userIds = userIds.subList(0, 100);
+		}
+		if(usernames != null && usernames.size() > 100){
+			usernames = usernames.subList(0, 100);
+		}
+		if(languages != null && languages.size() > 100){
+			languages = languages.subList(0, 100);
+		}
+		
+		gameIds.forEach(id -> {
+			if(!isNullOrEmpty(id)){
+				req.param("game_id", id);
+			}
+		});
+		userIds.forEach(id -> {
+			if(!isNullOrEmpty(id)){
+				req.param("user_id", id);
+			}
+		});
+		usernames.forEach(name -> {
+			if(!isNullOrEmpty(name)){
+				req.param("user_login", name);
+			}
+		});
+		languages.forEach(language -> {
+			if(!isNullOrEmpty(language)){
+				req.param("language", language);
+			}
+		});
+		
+		final List<Stream> streams = new ArrayList<>();
+		
+		final List<ExpandedCurlResponse> responses = CurlTemplates.performPaginationRequest(req, twitch.ratelimit(), RateLimitManager.BucketName.ALL.id);
+		responses.forEach(res -> {
+			if(res.isValidJson() && res.hasData()){
+				res.getData().asJsonArray().forEach(value -> {
+					if(value instanceof JsonObject){
+						streams.add(new Stream(value.asJsonObject()));
+					}
+				});
+			}
+		});
+		
+		return streams;
 	}
 	
 	private boolean isNullOrEmpty(String str){

@@ -86,7 +86,7 @@ public final class CurlTemplates {
 				responses.add(initalRes);
 				
 				ExpandedCurlResponse lastRes = initalRes;
-				while(lastRes != null && lastRes.hasPaginationCursor()){
+				while(lastRes != null && lastRes.isValidJson() && lastRes.hasPaginationCursor()){
 					req.removeParams("after");
 					req.param("after", lastRes.getPaginationCursor());
 					if(ratelimit.tryConsume(bucketName, 1)){
