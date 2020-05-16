@@ -11,6 +11,7 @@ import com.lukestadem.repulse.entities.BitsLeaderboard;
 import com.lukestadem.repulse.entities.Clip;
 import com.lukestadem.repulse.entities.Game;
 import com.lukestadem.repulse.entities.Stream;
+import com.lukestadem.repulse.entities.Tag;
 import com.lukestadem.repulse.entities.User;
 import org.codelibs.curl.Curl;
 import org.codelibs.curl.CurlRequest;
@@ -250,6 +251,39 @@ public class HelixClient {
 		});
 		
 		return streams;
+	}
+	
+	public List<Tag> getStreamTags(String userId){
+		if(isNullOrEmpty(userId)){
+			return null;
+		}
+		
+		if(twitch.hasTokenExpired()){
+			logAuthToken("getGames()");
+			return null;
+		}
+		
+		final CurlRequest req = CurlTemplates.get(twitch, Constants.HELIX + "streams/tags");
+		
+		req.param("broadcaster_id", userId);
+		
+		if(twitch.ratelimit().tryConsume(RateLimitManager.BucketName.ALL, 1)){
+			final ExpandedCurlResponse res = CurlTemplates.performRequest(req);
+			
+			if(res.isValidJson() && res.hasData()){
+				final List<Tag> tags = new ArrayList<>();
+				res.getData().asJsonArray().forEach(value -> {
+					if(value instanceof JsonObject){
+						tags.add(new Tag(value.asJsonObject()));
+					}
+				});
+				return tags;
+			} else if(res.hasError()){
+				log.error(res.getError().toString());
+			}
+		}
+		
+		return null;
 	}
 	
 	public List<User> getUsers(String userId, String username){
