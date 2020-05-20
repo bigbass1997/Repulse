@@ -56,6 +56,11 @@ public class TwitchClientBuilder {
 		return this;
 	}
 	
+	public TwitchClientBuilder withChatUsername(String username){
+		auth.username = username;
+		return this;
+	}
+	
 	/**
 	 * Provide {@code true} if you want the {@link TwitchClient} to automatically refresh the auth token in the
 	 * case that it has expired whenever {@link TwitchClient#hasTokenExpired()} is called.

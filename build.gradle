@@ -69,3 +69,7 @@ publishing {
         }
     }
 }
+
+run {
+	standardInput = System.in
+}

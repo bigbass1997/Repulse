@@ -1,5 +1,7 @@
 package com.lukestadem.repulse;
 
+import com.lukestadem.repulse.chat.ChatClient;
+import com.lukestadem.repulse.events.EventManager;
 import com.lukestadem.repulse.helix.HelixClient;
 import com.lukestadem.repulse.pubsub.PubSubClient;
 import org.codelibs.curl.Curl;
@@ -21,8 +23,11 @@ public class TwitchClient {
 	
 	private int timeout;
 	
+	private EventManager eventManager;
+	
 	private HelixClient helix;
 	private PubSubClient pubsub;
+	private ChatClient chat;
 	
 	private RateLimitManager ratelimit;
 	
@@ -38,8 +43,19 @@ public class TwitchClient {
 		
 		this.timeout = timeout;
 		
+		eventManager = new EventManager();
+		
+		if(!hasTokenExpired()){
+			retrieveUsername();
+		}
+		
 		helix = new HelixClient(this);
 		pubsub = new PubSubClient();
+		
+		if(this.auth.username == null || this.auth.username.isEmpty()){
+			this.auth.username = retrieveUsername();
+		}
+		chat = new ChatClient(this);
 		
 		ratelimit = new RateLimitManager();
 		ratelimit.registerBucket(RateLimitManager.BucketName.ALL, 800, Duration.ofMinutes(1));
@@ -102,12 +118,51 @@ public class TwitchClient {
 		return auth.hasExpired();
 	}
 	
+	/**
+	 * Attempts to retrieve the username linked to the client's auth token via the validation endpoint. If the client's
+	 * auth token already contains a username, that will be returned immediately and no validation will
+	 * 
+	 * @return the twitch username that matches the client's token, may return null if the token is null or no username was found
+	 */
+	public String retrieveUsername(){
+		if(auth == null){
+			return null;
+		}
+		
+		if(auth.username != null && !auth.username.isEmpty()){
+			return auth.username;
+		}
+		
+		if(auth.access == null || auth.access.isEmpty()){
+			return null;
+		}
+		
+		final CurlResponse res = Curl.get(Constants.OAUTH2 + "validate")
+				.header(Constants.AUTHORIZATION, "OAuth " + auth.access)
+				.execute();
+		
+		final JsonObject json = JsonUtil.parseJson(res);
+		if(json == null || !json.containsKey("login")){
+			return null;
+		}
+		
+		return json.getString("login", null);
+	}
+	
+	public EventManager events(){
+		return eventManager;
+	}
+	
 	public HelixClient helix(){
 		return helix;
 	}
 	
 	public PubSubClient pubsub(){
 		return pubsub;
+	}
+	
+	public ChatClient chat(){
+		return chat;
 	}
 	
 	public RateLimitManager ratelimit(){
@@ -145,5 +200,9 @@ public class TwitchClient {
 	
 	public int getTimeout(){
 		return timeout;
+	}
+	
+	public void dispose(){
+		chat().dispose();
 	}
 }

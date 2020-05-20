@@ -11,4 +11,5 @@ public class Constants {
 	
 	public static final String OAUTH2 = "https://id.twitch.tv/oauth2/";
 	
+	public static final String IRC_SECURE_URL = "wss://irc-ws.chat.twitch.tv:443";
 }
