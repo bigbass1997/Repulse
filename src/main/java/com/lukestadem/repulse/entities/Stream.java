@@ -1,5 +1,7 @@
 package com.lukestadem.repulse.entities;
 
+import com.lukestadem.repulse.TwitchClient;
+
 import javax.json.JsonObject;
 import javax.json.JsonString;
 import java.time.Instant;
@@ -65,5 +67,27 @@ public class Stream {
 	
 	public boolean isLive(){
 		return type.equals("live");
+	}
+	
+	public Game getGame(TwitchClient cli){
+		final List<Game> games = cli.helix().getGames(gameId, null);
+		if(games != null && games.size() > 0){
+			return games.get(0);
+		}
+		
+		return null;
+	}
+	
+	public User getUser(TwitchClient cli){
+		final List<User> users = cli.helix().getUsers(userId, null);
+		if(users != null && users.size() > 0){
+			return users.get(0);
+		}
+		
+		return null;
+	}
+	
+	public List<Tag> getTags(TwitchClient cli){
+		return cli.helix().getStreamTags(userId);
 	}
 }
