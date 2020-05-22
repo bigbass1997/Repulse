@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class IrcClient extends WebSocketClient {
+public class IrcWebsocket extends WebSocketClient {
 	
-	private static final Logger log = LoggerFactory.getLogger(IrcClient.class);
+	private static final Logger log = LoggerFactory.getLogger(IrcWebsocket.class);
 	
 	private final TwitchClient twitch;
 	
@@ -29,7 +29,7 @@ public class IrcClient extends WebSocketClient {
 	
 	private boolean isDisposed;
 	
-	public IrcClient(TwitchClient twitch){
+	public IrcWebsocket(TwitchClient twitch){
 		super(URI.create(Constants.IRC_SECURE_URL));
 		
 		this.twitch = twitch;

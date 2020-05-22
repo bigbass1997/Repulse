@@ -14,11 +14,12 @@ public class ChatClient {
 	private static final Logger log = LoggerFactory.getLogger(ChatClient.class);
 	
 	private static final Pattern MSG_PARSE_PATTERN = Pattern.compile("^.*:.*!.*@.*\\.tmi\\.twitch\\.tv PRIVMSG #[a-zA-Z_1-9]+ :");
+	private static final Pattern CHANNEL_PARSE_PATTERN = Pattern.compile("^.*:.*!.*@.*\\.tmi\\.twitch\\.tv PRIVMSG #");
 	private static final Pattern JOIN_PARSE_PATTERN = Pattern.compile("^:.*!.*@.*tv JOIN #");
 	private static final Pattern PART_PARSE_PATTERN = Pattern.compile("^:.*!.*@.*tv PART #");
 	
 	private final TwitchClient twitch;
-	private final IrcClient irc;
+	private final IrcWebsocket irc;
 	
 	private List<String> joinedChannels;
 	
@@ -27,7 +28,7 @@ public class ChatClient {
 		
 		joinedChannels = new ArrayList<>();
 		
-		irc = new IrcClient(this.twitch);
+		irc = new IrcWebsocket(this.twitch);
 		irc.addListener(new IrcAdapter(){
 			@Override
 			public void onMessage(String message){
@@ -42,8 +43,11 @@ public class ChatClient {
 				}
 				
 				if(message.matches(".*tmi\\.twitch\\.tv PRIVMSG #.*")){
-					String s = MSG_PARSE_PATTERN.matcher(message).replaceFirst("");
-					twitch.events().post(new IrcMessageEvent(s));
+					final String parsedMessage = MSG_PARSE_PATTERN.matcher(message).replaceFirst("");
+					String parsedChannel = CHANNEL_PARSE_PATTERN.matcher(message).replaceFirst("");
+					parsedChannel = parsedChannel.substring(0, parsedChannel.indexOf(" :"));
+					
+					twitch.events().post(new IrcMessageEvent(message, parsedMessage, parsedChannel));
 				}
 			}
 			
