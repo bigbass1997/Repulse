@@ -3,6 +3,7 @@ package com.lukestadem.repulse;
 import com.lukestadem.repulse.chat.ChatClient;
 import com.lukestadem.repulse.events.EventManager;
 import com.lukestadem.repulse.helix.HelixClient;
+import com.lukestadem.repulse.helix.StreamWatch;
 import com.lukestadem.repulse.pubsub.PubSubClient;
 import org.codelibs.curl.Curl;
 import org.codelibs.curl.CurlResponse;
@@ -10,7 +11,7 @@ import org.codelibs.curl.CurlResponse;
 import javax.json.JsonObject;
 import java.time.Duration;
 
-public class TwitchClient {
+public class TwitchClient implements Disposable {
 	
 	private final String clientId;
 	private final String clientSecret;
@@ -30,6 +31,8 @@ public class TwitchClient {
 	private ChatClient chat;
 	
 	private RateLimitManager ratelimit;
+	
+	private StreamWatch streamWatch;
 	
 	public TwitchClient(String clientId, String clientSecret, OAuthToken auth, boolean autoRefresh, String userAgent, String redirectUrl, int timeout){
 		this.clientId = clientId;
@@ -59,6 +62,8 @@ public class TwitchClient {
 		
 		ratelimit = new RateLimitManager();
 		ratelimit.registerBucket(RateLimitManager.BucketName.ALL, 800, Duration.ofMinutes(1));
+		
+		streamWatch = new StreamWatch(this);
 	}
 	
 	/**
@@ -169,6 +174,10 @@ public class TwitchClient {
 		return ratelimit;
 	}
 	
+	public StreamWatch watch(){
+		return streamWatch;
+	}
+	
 	public String getClientId(){
 		return clientId;
 	}
@@ -202,7 +211,9 @@ public class TwitchClient {
 		return timeout;
 	}
 	
+	@Override
 	public void dispose(){
+		streamWatch.dispose();
 		chat().dispose();
 	}
 }

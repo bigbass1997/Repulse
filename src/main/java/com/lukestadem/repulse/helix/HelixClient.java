@@ -196,6 +196,10 @@ public class HelixClient {
 			throw new IllegalArgumentException("getStreams() was provided all null data");
 		}
 		
+		if(isNullOrEmpty(gameIds) && isNullOrEmpty(userIds) && isNullOrEmpty(usernames) && isNullOrEmpty( languages)){
+			return null;
+		}
+		
 		if(twitch.hasTokenExpired()){
 			logAuthToken("getStreams()");
 			return null;
@@ -216,26 +220,34 @@ public class HelixClient {
 			languages = languages.subList(0, 100);
 		}
 		
-		gameIds.forEach(id -> {
-			if(!isNullOrEmpty(id)){
-				req.param("game_id", id);
-			}
-		});
-		userIds.forEach(id -> {
-			if(!isNullOrEmpty(id)){
-				req.param("user_id", id);
-			}
-		});
-		usernames.forEach(name -> {
-			if(!isNullOrEmpty(name)){
-				req.param("user_login", name);
-			}
-		});
-		languages.forEach(language -> {
-			if(!isNullOrEmpty(language)){
-				req.param("language", language);
-			}
-		});
+		if(gameIds != null){
+			gameIds.forEach(id -> {
+				if(!isNullOrEmpty(id)){
+					req.param("game_id", id);
+				}
+			});
+		}
+		if(userIds != null){
+			userIds.forEach(id -> {
+				if(!isNullOrEmpty(id)){
+					req.param("user_id", id);
+				}
+			});
+		}
+		if(usernames != null){
+			usernames.forEach(name -> {
+				if(!isNullOrEmpty(name)){
+					req.param("user_login", name);
+				}
+			});
+		}
+		if(languages != null){
+			languages.forEach(language -> {
+				if(!isNullOrEmpty(language)){
+					req.param("language", language);
+				}
+			});
+		}
 		
 		final List<Stream> streams = new ArrayList<>();
 		
@@ -345,6 +357,10 @@ public class HelixClient {
 	
 	private boolean isNullOrEmpty(String str){
 		return (str == null || str.isEmpty());
+	}
+	
+	private boolean isNullOrEmpty(List<?> list){
+		return (list == null || list.isEmpty());
 	}
 	
 	private void logAuthToken(String funcName){

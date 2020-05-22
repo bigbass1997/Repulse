@@ -10,9 +10,11 @@ public class ReusableCurlRequest extends CurlRequest {
 	}
 	
 	public ReusableCurlRequest removeParams(String key){
-		paramList.removeIf(param -> {
-			return param.startsWith(encode(key));
-		});
+		if(paramList != null){
+			paramList.removeIf(param -> {
+				return param.startsWith(encode(key));
+			});
+		}
 		
 		return this;
 	}

@@ -1,5 +1,6 @@
 package com.lukestadem.repulse.chat;
 
+import com.lukestadem.repulse.Disposable;
 import com.lukestadem.repulse.TwitchClient;
 import com.lukestadem.repulse.events.IrcMessageEvent;
 import org.java_websocket.handshake.ServerHandshake;
@@ -9,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
-public class ChatClient {
+public class ChatClient implements Disposable {
 	
 	private static final Logger log = LoggerFactory.getLogger(ChatClient.class);
 	
@@ -88,6 +89,7 @@ public class ChatClient {
 		return joinedChannels.toArray(new String[0]);
 	}
 	
+	@Override
 	public void dispose(){
 		irc.dispose();
 	}

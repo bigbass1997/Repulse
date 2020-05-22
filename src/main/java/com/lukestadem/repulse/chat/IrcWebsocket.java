@@ -1,6 +1,7 @@
 package com.lukestadem.repulse.chat;
 
 import com.lukestadem.repulse.Constants;
+import com.lukestadem.repulse.Disposable;
 import com.lukestadem.repulse.TwitchClient;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.enums.ReadyState;
@@ -13,7 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class IrcWebsocket extends WebSocketClient {
+public class IrcWebsocket extends WebSocketClient implements Disposable {
 	
 	private static final Logger log = LoggerFactory.getLogger(IrcWebsocket.class);
 	
@@ -157,6 +158,7 @@ public class IrcWebsocket extends WebSocketClient {
 		});
 	}
 	
+	@Override
 	public void dispose(){
 		isDisposed = true;
 		
