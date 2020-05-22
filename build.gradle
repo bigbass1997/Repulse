@@ -31,7 +31,7 @@ dependencies {
 	api 'com.github.vladimir-bukhtoyarov:bucket4j-core:4.10.0'
 }
 
-version = '1.0.0'
+version = '1.0.1'
 group = 'com.lukestadem'
 sourceCompatibility = '1.8'
 
